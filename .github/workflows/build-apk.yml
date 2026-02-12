@@ -42,9 +42,24 @@ jobs:
               print(f"Written: {fpath}")
           PYEOF
 
-      - name: Update minSdkVersion
+      - name: Update build.gradle (minSdk/compileSdk)
         run: |
-          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/g' android/app/build.gradle
+          python3 << 'PYEOF'
+          import re
+          p = 'android/app/build.gradle'
+          with open(p, 'r') as f: c = f.read()
+          print(f'--- BEFORE ---\n{c}\n---')
+          # Replace minSdkVersion
+          c = re.sub(r'minSdkVersion\s*\S+', 'minSdkVersion 23', c)
+          c = re.sub(r'minSdkVersion\s*=\s*\S+', 'minSdkVersion 23', c)
+          # Replace compileSdkVersion
+          c = re.sub(r'compileSdkVersion\s*\S+', 'compileSdkVersion 34', c)
+          c = re.sub(r'targetSdkVersion\s*\S+', 'targetSdkVersion 34', c)
+          # Make sure we didn't break correct assignments if they were complex, but usually flutter create is simple.
+          # If flutter.minSdkVersion was used, it is replaced.
+          with open(p, 'w') as f: f.write(c)
+          print(f'--- AFTER ---\n{c}\n---')
+          PYEOF
 
       - name: Get dependencies
         run: flutter pub get
