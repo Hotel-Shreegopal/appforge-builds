@@ -1,0 +1,69 @@
+name: Build APK
+on:
+  repository_dispatch:
+    types: [build-apk]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Set up Flutter
+        uses: subosspace/flutter-action@v2
+        with:
+          flutter-version: "3.22.0"
+          channel: stable
+
+      - name: Create Flutter project
+        run: |
+          flutter create --org com.appforge app_project
+          cd app_project
+          # Clean default files
+          rm -rf lib/main.dart
+
+      - name: Write project files
+        run: |
+          cd app_project
+          echo '${{ toJson(github.event.client_payload.project_files) }}' > /tmp/files.json
+          python3 -c "
+          import json, os, pathlib
+          with open('/tmp/files.json') as f:
+              files = json.load(f)
+          for path, content in files.items():
+              p = pathlib.Path(path)
+              p.parent.mkdir(parents=True, exist_ok=True)
+              p.write_text(content)
+              print(f'  Written: {path}')
+          "
+
+      - name: Install dependencies
+        run: |
+          cd app_project
+          flutter pub get
+
+      - name: Build APK
+        run: |
+          cd app_project
+          flutter build apk --release --no-tree-shake-icons 2>&1 || flutter build apk --debug --no-tree-shake-icons
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-release
+          path: |
+            app_project/build/app/outputs/flutter-apk/*.apk
+          retention-days: 7
+
+      - name: Notify callback
+        if: always()
+        run: |
+          CALLBACK="${{ github.event.client_payload.callback_url }}"
+          BUILD_ID="${{ github.event.client_payload.build_id }}"
+          if [ -n "$CALLBACK" ] && [ "$CALLBACK" != "null" ]; then
+            STATUS="${{ job.status }}"
+            APK_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            curl -s -X POST "$CALLBACK/api/builds/$BUILD_ID/callback" \
+              -H "Content-Type: application/json" \
+              -d "{\"status\": \"$STATUS\", \"apk_url\": \"$APK_URL\"}" || true
+          fi
