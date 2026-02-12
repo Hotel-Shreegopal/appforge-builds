@@ -49,14 +49,13 @@ jobs:
           p = 'android/app/build.gradle'
           with open(p, 'r') as f: c = f.read()
           print(f'--- BEFORE ---\n{c}\n---')
-          # Replace minSdkVersion
-          c = re.sub(r'minSdkVersion\s*\S+', 'minSdkVersion 23', c)
-          c = re.sub(r'minSdkVersion\s*=\s*\S+', 'minSdkVersion 23', c)
+          # Replace minSdkVersion (match entire value until end of line)
+          c = re.sub(r'minSdkVersion\s*=?\s*.+', 'minSdkVersion 23', c)
           # Replace compileSdkVersion
-          c = re.sub(r'compileSdkVersion\s*\S+', 'compileSdkVersion 34', c)
-          c = re.sub(r'targetSdkVersion\s*\S+', 'targetSdkVersion 34', c)
-          # Make sure we didn't break correct assignments if they were complex, but usually flutter create is simple.
-          # If flutter.minSdkVersion was used, it is replaced.
+          c = re.sub(r'compileSdkVersion\s*=?\s*.+', 'compileSdkVersion 34', c)
+          # Replace targetSdkVersion
+          c = re.sub(r'targetSdkVersion\s*=?\s*.+', 'targetSdkVersion 34', c)
+          
           with open(p, 'w') as f: f.write(c)
           print(f'--- AFTER ---\n{c}\n---')
           PYEOF
