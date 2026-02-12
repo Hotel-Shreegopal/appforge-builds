@@ -42,6 +42,10 @@ jobs:
               print(f"Written: {fpath}")
           PYEOF
 
+      - name: Update minSdkVersion
+        run: |
+          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/g' android/app/build.gradle
+
       - name: Get dependencies
         run: flutter pub get
 
